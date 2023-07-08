@@ -6,8 +6,8 @@ import string
 class Hand:
     suits = ['♠', '♥', '♣', '♦']
 
-    def __init__(self, numCards: int):
-        self.cards = self._getCards(numCards)
+    def __init__(self):
+        self.cards = self._getCards(2)
     
     @property
     def _fcards(self) -> list[int]:
@@ -32,21 +32,15 @@ class Hand:
         """
         return random.randint(1, 14)
     
-    def _getCards(self, num: int) -> list[int]|int:
-        """Gets num amount of cards to play with
-        
-        Parameters:
-        num(int): The number of cards to generate
-        
+    @staticmethod
+    def _getCards() -> list[int]:
+        """Static method that returns a list of two random cards 1-14
+
         Returns:
-        (list[int]|int): Returns one card or a list of cards if num > 1
-        
-        Pre:
-        num <= 2; If not then a nested list will be returned
+        (list[int]): Returns a list of 2 random numbers from 1-14
+
         """
-        card = Hand.getRandomCard() # Ace - King
-        if (num == 1): return card
-        return [card, self._getCards(num-1)]
+        return [Hand.getRandomCard() for i in range(2)]
 
     def getCount(self) -> int:
         """Integer representing the count of the hand
@@ -66,7 +60,7 @@ class Hand:
             aces -= 1
         return cnt
 
-    def checkBust(self) -> bool:
+    def IsBusted(self) -> bool:
         """Checks if the hand is a bust
         
         Returns:
@@ -92,10 +86,52 @@ class Hand:
         """
         return " ".join(list(map(lambda x: f"{random.choice(self.suits)}{x}", self.cards)))
 
-class Player(Hand):
-    def __init__(self):
-        super(Hand, self).__init__(2)
+    def hasBJ(self) -> bool:
+        """Returns a boolean representing whether or not the hand has BJ
+        
+        Returns:
+        (bool): If the hand has BJ returns True
 
+        Prereq:
+        len(self.cards) == 2
+
+        """
+        return sum(self.cards) == 21
+    
 class Dealer(Hand):
     def __init__(self):
-        super(Hand, self).__init__(1)
+        super(Hand, self).__init__() # Card 2 will be hidden from the player
+    
+    def getUpCard(self):
+        """Getter function that will return the first card shown upwards to the player"""
+        return self.cards[0]
+    
+    def playHand(self) -> None:
+        """Plays the hand for the dealer and stops once it goes over 21"""
+
+        # While 17 is greater than the count just keep hitting, we will deal with whether it busts or not later
+        while (self.getCount() < 17): self.hit()
+    
+
+class Player(Hand):
+    dealer: Dealer = None
+
+    def __init__(self):
+        super(Hand, self).__init__()
+    
+    def stand(self) -> int:
+        """Player stands and this function will tell you if you win or lose
+        
+        Returns:
+        (int): An integer representing whether you won (1), pushed (0), or loss (-1)
+        
+        """
+        if (self.isBusted()): return -1 # Checks if the player busts first
+
+        self.dealer.playHand()
+        if (self.dealer.IsBusted()): return 1 # Checks if the dealer busted
+
+        playerCnt = self.getCount()
+        dealerCnt = self.dealer.getCount()
+        if (playerCnt == dealerCnt): return 0 # Push
+        return 1 if playerCnt > dealerCnt else -1 # Finally just check the counts
